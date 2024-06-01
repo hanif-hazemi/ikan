@@ -24,6 +24,8 @@
             text-align: center;
             color: #FFD700;
             text-shadow: 2px 2px 4px #000000;
+            z-index: 1;
+            position: relative;
         }
 
         .calendar-container {
@@ -109,13 +111,14 @@
         }
 
         @media screen and (max-width: 768px) {
-            h1 {
-                font-size: 1.5em;
-                margin-bottom: 15px;
+            .calendar-container {
+                transform: scale(0.75); /* Scale down the calendar for mobile view */
             }
             .calendar {
                 margin: 10px 0;
-                transform: scale(0.85); /* Reduce size by 15% */
+            }
+            h1 {
+                margin-bottom: 10px; /* More room for the title */
             }
         }
 
@@ -165,9 +168,11 @@
 
         function formatTime(date) {
             let hours = date.getHours();
+            const minutes = date.getMinutes();
             const ampm = hours >= 12 ? 'PM' : 'AM';
             hours = hours % 12;
             hours = hours ? hours : 12; // the hour '0' should be '12'
+            const minutesStr = minutes < 10 ? '0' + minutes : minutes;
             return `${hours}${ampm}`;
         }
 
