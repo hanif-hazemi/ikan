@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fish Feeding Calendar</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.6);
+            color: #ffffff;
+            font-family: 'Arial', sans-serif;
+        }
+
+        h1 {
+            font-size: 2em;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #FFD700;
+            text-shadow: 2px 2px 4px #000000;
+        }
+
+        .calendar-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            max-width: 1200px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .calendar {
+            border-collapse: collapse;
+            margin: 20px;
+            width: 100%;
+            max-width: 400px;
+            min-width: 300px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .calendar th, .calendar td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+            width: 14.2857%;
+            box-sizing: border-box;
+        }
+
+        .calendar .feeding {
+            background-color: #32CD32;
+        }
+
+        .month-header {
+            font-weight: bold;
+            font-size: 1.5em;
+            margin-bottom: 10px;
+            text-align: center;
+            color: #FFD700;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        @media screen and (max-width: 768px) {
+            .calendar {
+                margin: 10px;
+            }
+        }
+
+        video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1;
+        }
+    </style>
+</head>
+<body>
+    <video autoplay muted loop>
+        <source src="videoikan_1.mp4" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+    <h1>Fish Feeding Calendar</h1>
+    <div class="calendar-container" id="calendar-container"></div>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.0/papaparse.min.js"></script>
+    <script>
+        const SHEET_URL = 'https://cors-anywhere.herokuapp.com/https://docs.google.com/spreadsheets/d/e/2PACX-1vTr3CoBR00okMPYRJqQTpDYeEMplN7kbVfewd5ygqXgq86LgbVMzrjqylFywbfMorZ-v3jhxBVZd2N4/pub?output=csv';
+
+        async function fetchFeedingData() {
+            const response = await fetch(SHEET_URL);
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const csvText = await response.text();
+            const results = Papa.parse(csvText, { header: true });
+            console.log('Parsed CSV data:', results.data);
+            return results.data.map(row => {
+                const feedingDate = row['if bukan skrg, bila bg makan?'] || row['Timestamp'];
+                if (feedingDate) {
+                    console.log('Parsed date:', feedingDate);
+                    const [datePart] = feedingDate.split(' '); // Get only the date part
+                    const [month, day, year] = datePart.split('/').map(part => parseInt(part, 10));
+                    return new Date(year, month - 1, day); // Create Date object
+                }
+                return null;
+            }).filter(date => date !== null);
+        }
+
+        function generateCalendar(month, year, feedingDates) {
+            const calendarContainer = document.getElementById('calendar-container');
+
+            const calendarWrapper = document.createElement('div');
+            calendarWrapper.classList.add('calendar-wrapper');
+
+            // Month header
+            const monthHeader = document.createElement('div');
+            monthHeader.classList.add('month-header');
+            monthHeader.textContent = `${new Date(year, month).toLocaleString('default', { month: 'long' })} ${year}`;
+            calendarWrapper.appendChild(monthHeader);
+
+            const calendar = document.createElement('table');
+            calendar.classList.add('calendar');
+
+            // Days of the week
+            const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const headerRow = calendar.insertRow();
+            daysOfWeek.forEach(day => {
+                const cell = headerRow.insertCell();
+                cell.textContent = day;
+            });
+
+            // Determine the starting day of the month
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+            let currentRow = calendar.insertRow();
+            for (let i = 0; i < firstDay; i++) {
+                currentRow.insertCell();
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                if (currentRow.cells.length === 7) {
+                    currentRow = calendar.insertRow();
+                }
+                const cell = currentRow.insertCell();
+                cell.textContent = day;
+
+                const currentDate = new Date(year, month, day);
+                if (feedingDates.some(date => date.toDateString() === currentDate.toDateString())) {
+                    cell.classList.add('feeding');
+                }
+            }
+
+            calendarWrapper.appendChild(calendar);
+            calendarContainer.appendChild(calendarWrapper);
+        }
+
+        async function init() {
+            const feedingDates = await fetchFeedingData();
+            const today = new Date();
+            const currentMonth = today.getMonth();
+            const currentYear = today.getFullYear();
+            const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+            const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+
+            generateCalendar(prevMonth, prevYear, feedingDates);
+            generateCalendar(currentMonth, currentYear, feedingDates);
+        }
+
+        init();
+    </script>
+</body>
+</html>
