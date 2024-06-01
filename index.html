@@ -28,8 +28,8 @@
 
         .calendar-container {
             display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
+            flex-direction: column;
+            align-items: center;
             width: 100%;
             max-width: 1200px;
             background: rgba(255, 255, 255, 0.8);
@@ -38,9 +38,17 @@
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
         }
 
+        .calendar-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
         .calendar {
             border-collapse: collapse;
-            margin: 20px;
+            margin: 20px 10px;
             width: 100%;
             max-width: 400px;
             min-width: 300px;
@@ -55,10 +63,16 @@
             text-align: center;
             width: 14.2857%;
             box-sizing: border-box;
+            color: #000000;
+            position: relative;
         }
 
         .calendar .feeding {
             background-color: #32CD32;
+        }
+
+        .calendar .today {
+            border: 2px solid #8B0000;
         }
 
         .month-header {
@@ -70,11 +84,33 @@
             background: rgba(0, 0, 0, 0.7);
             padding: 10px;
             border-radius: 10px;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .calendar .feeding-time {
+            font-size: 0.6em;
+            color: #FFD700;
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            writing-mode: vertical-lr;
+            transform: rotate(180deg);
+        }
+
+        @media screen and (min-width: 768px) {
+            .calendar-container {
+                flex-direction: row;
+                justify-content: space-around;
+            }
+            .calendar-wrapper {
+                margin: 20px;
+            }
         }
 
         @media screen and (max-width: 768px) {
             .calendar {
-                margin: 10px;
+                margin: 10px 0;
             }
         }
 
@@ -112,12 +148,24 @@
                 const feedingDate = row['if bukan skrg, bila bg makan?'] || row['Timestamp'];
                 if (feedingDate) {
                     console.log('Parsed date:', feedingDate);
-                    const [datePart] = feedingDate.split(' '); // Get only the date part
+                    const [datePart, timePart] = feedingDate.split(' '); // Get the date and time parts
                     const [month, day, year] = datePart.split('/').map(part => parseInt(part, 10));
-                    return new Date(year, month - 1, day); // Create Date object
+                    const [hour, minute] = timePart.split(':').map(part => parseInt(part, 10));
+                    const date = new Date(year, month - 1, day, hour, minute); // Create Date object
+                    return date;
                 }
                 return null;
             }).filter(date => date !== null);
+        }
+
+        function formatTime(date) {
+            let hours = date.getHours();
+            const minutes = date.getMinutes();
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12; // the hour '0' should be '12'
+            const minutesStr = minutes < 10 ? '0' + minutes : minutes;
+            return `${hours}${ampm}`;
         }
 
         function generateCalendar(month, year, feedingDates) {
@@ -160,8 +208,22 @@
                 cell.textContent = day;
 
                 const currentDate = new Date(year, month, day);
-                if (feedingDates.some(date => date.toDateString() === currentDate.toDateString())) {
+                const feedingDate = feedingDates.find(date => 
+                    date.getFullYear() === currentDate.getFullYear() &&
+                    date.getMonth() === currentDate.getMonth() &&
+                    date.getDate() === currentDate.getDate()
+                );
+
+                if (feedingDate) {
                     cell.classList.add('feeding');
+                    const timeSpan = document.createElement('span');
+                    timeSpan.classList.add('feeding-time');
+                    timeSpan.textContent = formatTime(feedingDate);
+                    cell.appendChild(timeSpan);
+                }
+
+                if (currentDate.toDateString() === new Date().toDateString()) {
+                    cell.classList.add('today');
                 }
             }
 
