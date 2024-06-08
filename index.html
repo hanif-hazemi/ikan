@@ -134,18 +134,27 @@
     <div class="calendar-container" id="calendar-container"></div>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.3.0/papaparse.min.js"></script>
     <script>
-        const SHEET_URL = 'https://cors-anywhere.herokuapp.com/https://docs.google.com/spreadsheets/d/e/2PACX-1vTr3CoBR00okMPYRJqQTpDYeEMplN7kbVfewd5ygqXgq86LgbVMzrjqylFywbfMorZ-v3jhxBVZd2N4/pub?output=csv';
+        const API_KEY = 'AIzaSyD2yQ8eNei_mtwqoDpyayCee0hSkKCDj5c';
+        const SHEET_ID = '1jtPdkHzU3tkydgjLc--2ySYsl51ig26Z76uELTeRhUo';
+        const SHEET_NAME = 'Form Responses 1'; // Replace with your actual sheet name
+
+        const SHEET_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`;
 
         async function fetchFeedingData() {
             const response = await fetch(SHEET_URL);
             if (!response.ok) {
                 throw new Error('Network response was not ok');
             }
-            const csvText = await response.text();
-            const results = Papa.parse(csvText, { header: true });
-            console.log('Parsed CSV data:', results.data);
-            return results.data.map(row => {
-                const feedingDate = row['if bukan skrg, bila bg makan?'] || row['Timestamp'];
+            const data = await response.json();
+            const rows = data.values;
+            console.log('Fetched Google Sheets data:', rows);
+            const headers = rows[0];
+            return rows.slice(1).map(row => {
+                const rowData = {};
+                headers.forEach((header, index) => {
+                    rowData[header] = row[index];
+                });
+                const feedingDate = rowData['if bukan skrg, bila bg makan?'] || rowData['Timestamp'];
                 if (feedingDate) {
                     console.log('Parsed date:', feedingDate);
                     const [datePart, timePart] = feedingDate.split(' '); // Get the date and time parts
